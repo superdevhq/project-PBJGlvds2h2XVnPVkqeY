@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { 
   Loader2, Copy, Check, RefreshCw, Zap, Code, Settings, 
-  X, Save, Key
+  X, Save, Key, AlertTriangle
 } from 'lucide-react';
 import {
   Popover,
@@ -80,6 +80,10 @@ const EXAMPLE_PROMPTS = [
   "Generate a gantt chart for a website development project"
 ];
 
+// OpenAI API configuration
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+const MODEL = "gpt-4o-mini"; // Using GPT-4o-mini model
+
 export const MermaidEditor: React.FC = () => {
   const [code, setCode] = useState<string>(DEFAULT_DIAGRAM);
   const [renderKey, setRenderKey] = useState<number>(0);
@@ -91,6 +95,15 @@ export const MermaidEditor: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>('');
   const [apiKeySet, setApiKeySet] = useState<boolean>(false);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
+
+  // Load API key from localStorage on component mount
+  useEffect(() => {
+    const savedApiKey = localStorage.getItem('openai-api-key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+      setApiKeySet(true);
+    }
+  }, []);
 
   // Re-render diagram when code changes
   useEffect(() => {
@@ -125,6 +138,7 @@ export const MermaidEditor: React.FC = () => {
   const handleReset = () => {
     setCode(DEFAULT_DIAGRAM);
     setAiPrompt('');
+    setError(null);
   };
 
   const handleExampleSelect = (example: keyof typeof EXAMPLES) => {
@@ -137,6 +151,7 @@ export const MermaidEditor: React.FC = () => {
 
   const handleSaveApiKey = () => {
     if (apiKey.trim()) {
+      localStorage.setItem('openai-api-key', apiKey);
       setApiKeySet(true);
       setSettingsOpen(false);
     }
@@ -144,93 +159,76 @@ export const MermaidEditor: React.FC = () => {
 
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
-    if (!apiKeySet) {
+    if (!apiKeySet || !apiKey) {
       setError('Please set your OpenAI API key in settings first');
       setSettingsOpen(true);
       return;
     }
     
     setAiLoading(true);
+    setError(null);
     
     try {
-      // In a real implementation, this would call the OpenAI API
-      const response = await callOpenAI(aiPrompt);
-      setCode(response);
-      setAiLoading(false);
-    } catch (error) {
-      console.error('Error generating diagram:', error);
-      setError('Failed to generate diagram with AI');
+      const mermaidCode = await callOpenAI(aiPrompt, apiKey);
+      setCode(mermaidCode);
+    } catch (err: any) {
+      console.error('Error generating diagram:', err);
+      setError(err.message || 'Failed to generate diagram with AI');
+    } finally {
       setAiLoading(false);
     }
   };
 
-  // Mock OpenAI API call - in a real app, this would use the actual API
-  const callOpenAI = async (prompt: string): Promise<string> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  // Actual OpenAI API call
+  const callOpenAI = async (prompt: string, apiKey: string): Promise<string> => {
+    const systemPrompt = `You are a diagram generation assistant that creates Mermaid syntax diagrams based on user requests. 
+    Always respond ONLY with valid Mermaid syntax code without any explanation, markdown formatting, or code blocks. 
+    The code should be ready to use directly in a Mermaid renderer.`;
     
-    // Generate different diagram types based on the prompt
-    if (prompt.toLowerCase().includes('flowchart') || prompt.toLowerCase().includes('flow')) {
-      return `graph TD
-    A[${prompt.slice(0, 15)}] --> B{Decision Point}
-    B -->|Option 1| C[Process 1]
-    B -->|Option 2| D[Process 2]
-    C --> E[Result 1]
-    D --> F[Result 2]
-    E --> G[Conclusion]
-    F --> G`;
-    } else if (prompt.toLowerCase().includes('sequence')) {
-      return `sequenceDiagram
-    participant User
-    participant System
-    participant Database
-    User->>System: Request Data
-    System->>Database: Query
-    Database-->>System: Return Results
-    System-->>User: Display Information`;
-    } else if (prompt.toLowerCase().includes('class')) {
-      return `classDiagram
-    class Main {
-      +start()
-    }
-    class Component {
-      +render()
-    }
-    class Model {
-      -data
-      +getData()
-      +setData()
-    }
-    Main --> Component
-    Component --> Model`;
-    } else if (prompt.toLowerCase().includes('state')) {
-      return `stateDiagram-v2
-    [*] --> Initial
-    Initial --> Processing
-    Processing --> Success
-    Processing --> Error
-    Success --> [*]
-    Error --> Retry
-    Retry --> Processing`;
-    } else if (prompt.toLowerCase().includes('gantt')) {
-      return `gantt
-    title Project Timeline
-    dateFormat  YYYY-MM-DD
-    section Planning
-    Requirements    :a1, 2023-06-01, 10d
-    Design          :after a1, 15d
-    section Development
-    Implementation  :2023-06-25, 20d
-    Testing         :after Implementation, 10d
-    section Deployment
-    Release         :2023-07-25, 5d`;
-    } else {
-      return `graph TD
-    A[${prompt.slice(0, 20)}] --> B{Decision?}
-    B -->|Option 1| C[Result 1]
-    B -->|Option 2| D[Result 2]
-    C --> E[Conclusion]
-    D --> E`;
+    const userPrompt = `Create a Mermaid diagram for: ${prompt}`;
+    
+    try {
+      const response = await fetch(OPENAI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const mermaidCode = data.choices[0]?.message?.content?.trim();
+      
+      if (!mermaidCode) {
+        throw new Error('No diagram generated. Please try a different prompt.');
+      }
+      
+      // Clean up the response in case it contains markdown code blocks
+      let cleanCode = mermaidCode;
+      if (cleanCode.startsWith('```mermaid')) {
+        cleanCode = cleanCode.replace('```mermaid', '').replace('```', '').trim();
+      } else if (cleanCode.startsWith('```')) {
+        cleanCode = cleanCode.replace(/```(?:mermaid)?/, '').replace('```', '').trim();
+      }
+      
+      return cleanCode;
+    } catch (error: any) {
+      console.error('OpenAI API error:', error);
+      throw new Error(error.message || 'Failed to connect to OpenAI API');
     }
   };
 
@@ -454,8 +452,9 @@ export const MermaidEditor: React.FC = () => {
           </div>
           <Card className="p-4 min-h-[400px] overflow-auto bg-white">
             {error ? (
-              <div className="text-red-500 p-4 border border-red-200 rounded-md">
-                {error}
+              <div className="text-red-500 p-4 border border-red-200 rounded-md flex items-start">
+                <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                <div>{error}</div>
               </div>
             ) : (
               <div key={renderKey} className="mermaid">
