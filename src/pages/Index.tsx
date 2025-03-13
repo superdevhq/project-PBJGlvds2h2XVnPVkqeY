@@ -1,17 +1,11 @@
 
 import MermaidEditor from '@/components/MermaidEditor';
+import Navbar from '@/components/Navbar';
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">AI Mermaid Diagram Generator</h1>
-            <div className="text-sm text-gray-500">Powered by GPT-4o-mini</div>
-          </div>
-        </div>
-      </header>
+      <Navbar />
       
       <main className="container mx-auto px-4 py-6">
         <div className="mb-6">
