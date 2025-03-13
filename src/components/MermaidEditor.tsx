@@ -6,7 +6,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Copy, Check, RefreshCw, Zap, MessageSquare, Code } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { 
+  Loader2, Copy, Check, RefreshCw, Zap, Code, Settings, 
+  X, Save, Key
+} from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from '@/components/ui/label';
 
 // Initialize mermaid
 mermaid.initialize({
@@ -73,13 +83,14 @@ const EXAMPLE_PROMPTS = [
 export const MermaidEditor: React.FC = () => {
   const [code, setCode] = useState<string>(DEFAULT_DIAGRAM);
   const [renderKey, setRenderKey] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'ai' | 'code'>('ai');
-  const [aiConversation, setAiConversation] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
+  const [activeTab, setActiveTab] = useState<'prompt' | 'code'>('prompt');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKeySet, setApiKeySet] = useState<boolean>(false);
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
 
   // Re-render diagram when code changes
   useEffect(() => {
@@ -113,7 +124,7 @@ export const MermaidEditor: React.FC = () => {
 
   const handleReset = () => {
     setCode(DEFAULT_DIAGRAM);
-    setAiConversation([]);
+    setAiPrompt('');
   };
 
   const handleExampleSelect = (example: keyof typeof EXAMPLES) => {
@@ -124,37 +135,52 @@ export const MermaidEditor: React.FC = () => {
     setAiPrompt(prompt);
   };
 
+  const handleSaveApiKey = () => {
+    if (apiKey.trim()) {
+      setApiKeySet(true);
+      setSettingsOpen(false);
+    }
+  };
+
   const handleAiGenerate = async () => {
     if (!aiPrompt.trim()) return;
+    if (!apiKeySet) {
+      setError('Please set your OpenAI API key in settings first');
+      setSettingsOpen(true);
+      return;
+    }
     
     setAiLoading(true);
     
     try {
-      // Add user message to conversation
-      const updatedConversation = [
-        ...aiConversation,
-        { role: 'user', content: aiPrompt }
-      ];
-      setAiConversation(updatedConversation);
-      
-      // This is a mock implementation - in a real app, you would call an API
-      // that connects to GPT-4o-mini to generate the diagram
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate AI response with a diagram based on the prompt
-      let aiGeneratedCode = '';
-      
-      if (aiPrompt.toLowerCase().includes('flowchart') || aiPrompt.toLowerCase().includes('flow')) {
-        aiGeneratedCode = `graph TD
-    A[${aiPrompt.slice(0, 15)}] --> B{Decision Point}
+      // In a real implementation, this would call the OpenAI API
+      const response = await callOpenAI(aiPrompt);
+      setCode(response);
+      setAiLoading(false);
+    } catch (error) {
+      console.error('Error generating diagram:', error);
+      setError('Failed to generate diagram with AI');
+      setAiLoading(false);
+    }
+  };
+
+  // Mock OpenAI API call - in a real app, this would use the actual API
+  const callOpenAI = async (prompt: string): Promise<string> => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Generate different diagram types based on the prompt
+    if (prompt.toLowerCase().includes('flowchart') || prompt.toLowerCase().includes('flow')) {
+      return `graph TD
+    A[${prompt.slice(0, 15)}] --> B{Decision Point}
     B -->|Option 1| C[Process 1]
     B -->|Option 2| D[Process 2]
     C --> E[Result 1]
     D --> F[Result 2]
     E --> G[Conclusion]
     F --> G`;
-      } else if (aiPrompt.toLowerCase().includes('sequence')) {
-        aiGeneratedCode = `sequenceDiagram
+    } else if (prompt.toLowerCase().includes('sequence')) {
+      return `sequenceDiagram
     participant User
     participant System
     participant Database
@@ -162,8 +188,8 @@ export const MermaidEditor: React.FC = () => {
     System->>Database: Query
     Database-->>System: Return Results
     System-->>User: Display Information`;
-      } else if (aiPrompt.toLowerCase().includes('class')) {
-        aiGeneratedCode = `classDiagram
+    } else if (prompt.toLowerCase().includes('class')) {
+      return `classDiagram
     class Main {
       +start()
     }
@@ -177,180 +203,115 @@ export const MermaidEditor: React.FC = () => {
     }
     Main --> Component
     Component --> Model`;
-      } else {
-        aiGeneratedCode = `graph TD
-    A[${aiPrompt.slice(0, 20)}] --> B{Decision?}
+    } else if (prompt.toLowerCase().includes('state')) {
+      return `stateDiagram-v2
+    [*] --> Initial
+    Initial --> Processing
+    Processing --> Success
+    Processing --> Error
+    Success --> [*]
+    Error --> Retry
+    Retry --> Processing`;
+    } else if (prompt.toLowerCase().includes('gantt')) {
+      return `gantt
+    title Project Timeline
+    dateFormat  YYYY-MM-DD
+    section Planning
+    Requirements    :a1, 2023-06-01, 10d
+    Design          :after a1, 15d
+    section Development
+    Implementation  :2023-06-25, 20d
+    Testing         :after Implementation, 10d
+    section Deployment
+    Release         :2023-07-25, 5d`;
+    } else {
+      return `graph TD
+    A[${prompt.slice(0, 20)}] --> B{Decision?}
     B -->|Option 1| C[Result 1]
     B -->|Option 2| D[Result 2]
     C --> E[Conclusion]
     D --> E`;
-      }
-      
-      // Add AI response to conversation
-      setAiConversation([
-        ...updatedConversation,
-        { 
-          role: 'assistant', 
-          content: `Here's a diagram based on your request:\n\n\`\`\`mermaid\n${aiGeneratedCode}\n\`\`\`` 
-        }
-      ]);
-      
-      setCode(aiGeneratedCode);
-      setAiPrompt('');
-      setAiLoading(false);
-    } catch (error) {
-      console.error('Error generating diagram:', error);
-      setError('Failed to generate diagram with AI');
-      setAiLoading(false);
     }
   };
 
   return (
     <div className="flex flex-col h-full w-full">
-      <Tabs defaultValue="ai" className="w-full" onValueChange={(value) => setActiveTab(value as 'ai' | 'code')}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="ai" className="flex items-center gap-1">
-            <MessageSquare className="h-4 w-4" />
-            AI Assistant
-          </TabsTrigger>
-          <TabsTrigger value="code" className="flex items-center gap-1">
-            <Code className="h-4 w-4" />
-            Code Editor
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="ai" className="flex flex-col md:flex-row gap-4">
-          {/* AI Chat Panel */}
-          <div className="flex flex-col w-full md:w-1/2 h-full">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-medium">GPT-4o-mini Assistant</h2>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleReset}
-                className="flex items-center gap-1"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Reset
-              </Button>
-            </div>
+      <div className="flex items-center justify-between mb-4">
+        <Tabs defaultValue="prompt" className="w-full" onValueChange={(value) => setActiveTab(value as 'prompt' | 'code')}>
+          <div className="flex items-center justify-between w-full">
+            <TabsList>
+              <TabsTrigger value="prompt" className="flex items-center gap-1">
+                <Zap className="h-4 w-4" />
+                AI Prompt
+              </TabsTrigger>
+              <TabsTrigger value="code" className="flex items-center gap-1">
+                <Code className="h-4 w-4" />
+                Mermaid Code
+              </TabsTrigger>
+            </TabsList>
             
-            <Card className="flex-1 min-h-[300px] overflow-auto p-4 mb-4">
-              {aiConversation.length === 0 ? (
-                <div className="text-center text-gray-500 h-full flex flex-col items-center justify-center">
-                  <MessageSquare className="h-12 w-12 mb-2 opacity-20" />
-                  <p>Ask GPT-4o-mini to create a diagram for you</p>
-                  <div className="mt-4 grid grid-cols-1 gap-2 w-full max-w-md">
-                    {EXAMPLE_PROMPTS.map((prompt, index) => (
-                      <Button 
-                        key={index} 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-left justify-start h-auto py-2 px-3"
-                        onClick={() => handleExamplePromptSelect(prompt)}
-                      >
-                        {prompt}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {aiConversation.map((message, index) => (
-                    <div 
-                      key={index} 
-                      className={`p-3 rounded-lg ${
-                        message.role === 'user' 
-                          ? 'bg-blue-50 ml-8' 
-                          : 'bg-gray-50 mr-8'
-                      }`}
-                    >
-                      <div className="font-medium mb-1 text-xs text-gray-500">
-                        {message.role === 'user' ? 'You' : 'GPT-4o-mini'}
-                      </div>
-                      <div className="whitespace-pre-wrap">
-                        {message.content}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-            
-            <div className="flex gap-2">
-              <Textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                className="text-sm flex-1"
-                placeholder="Describe the diagram you want to create..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && aiPrompt.trim()) {
-                    e.preventDefault();
-                    handleAiGenerate();
-                  }
-                }}
-              />
-              <Button 
-                onClick={handleAiGenerate} 
-                disabled={aiLoading || !aiPrompt.trim()}
-                className="flex items-center gap-1"
-              >
-                {aiLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Zap className="h-4 w-4" />
-                )}
-                Generate
-              </Button>
-            </div>
-          </div>
-          
-          <Separator orientation="vertical" className="hidden md:block" />
-          <Separator className="md:hidden" />
-          
-          {/* Preview Panel */}
-          <div className="w-full md:w-1/2 h-full">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-medium">Preview</h2>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCopy}
-                className="flex items-center gap-1"
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copied' : 'Copy Code'}
-              </Button>
-            </div>
-            <Card className="p-4 min-h-[400px] overflow-auto bg-white">
-              {error ? (
-                <div className="text-red-500 p-4 border border-red-200 rounded-md">
-                  {error}
-                </div>
-              ) : (
-                <div key={renderKey} className="mermaid">
-                  {code}
-                </div>
-              )}
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="code" className="flex flex-col md:flex-row gap-4">
-          {/* Code Editor Panel */}
-          <div className="flex flex-col w-full md:w-1/2 h-full">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-lg font-medium">Mermaid Code</h2>
-              <div className="flex gap-2">
+            <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <PopoverTrigger asChild>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={handleCopy}
                   className="flex items-center gap-1"
                 >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied' : 'Copy'}
+                  <Settings className="h-4 w-4" />
+                  {apiKeySet ? "API Key Set" : "Set API Key"}
                 </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-medium">OpenAI API Settings</h3>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0" 
+                    onClick={() => setSettingsOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="apiKey">OpenAI API Key</Label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        id="apiKey"
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="sk-..."
+                        className="flex-1"
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={handleSaveApiKey}
+                        disabled={!apiKey.trim()}
+                      >
+                        <Save className="h-4 w-4 mr-1" />
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Your API key is stored locally in your browser and never sent to our servers.
+                    </p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </Tabs>
+      </div>
+      
+      <div className="flex flex-col md:flex-row gap-4 h-full">
+        {/* Left Panel - Changes based on active tab */}
+        <div className="flex flex-col w-full md:w-1/2 h-full">
+          {activeTab === 'prompt' ? (
+            <>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-lg font-medium">Describe Your Diagram</h2>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -361,59 +322,149 @@ export const MermaidEditor: React.FC = () => {
                   Reset
                 </Button>
               </div>
-            </div>
-            
-            <Textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="font-mono text-sm flex-1 min-h-[400px] resize-none"
-              placeholder="Enter mermaid diagram code here..."
-            />
-            
-            <div className="mt-4">
-              <h3 className="text-sm font-medium mb-2">Examples</h3>
-              <Tabs defaultValue="flowchart">
-                <TabsList>
-                  <TabsTrigger value="flowchart" onClick={() => handleExampleSelect('flowchart')}>
-                    Flowchart
-                  </TabsTrigger>
-                  <TabsTrigger value="sequence" onClick={() => handleExampleSelect('sequence')}>
-                    Sequence
-                  </TabsTrigger>
-                  <TabsTrigger value="classDiagram" onClick={() => handleExampleSelect('classDiagram')}>
-                    Class
-                  </TabsTrigger>
-                  <TabsTrigger value="stateDiagram" onClick={() => handleExampleSelect('stateDiagram')}>
-                    State
-                  </TabsTrigger>
-                  <TabsTrigger value="gantt" onClick={() => handleExampleSelect('gantt')}>
-                    Gantt
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-          
-          <Separator orientation="vertical" className="hidden md:block" />
-          <Separator className="md:hidden" />
-          
-          {/* Preview Panel */}
-          <div className="w-full md:w-1/2 h-full">
-            <h2 className="text-lg font-medium mb-2">Preview</h2>
-            <Card className="p-4 min-h-[400px] overflow-auto bg-white">
-              {error ? (
-                <div className="text-red-500 p-4 border border-red-200 rounded-md">
-                  {error}
+              
+              <Card className="p-4 mb-4 flex-1">
+                <div className="flex flex-col h-full">
+                  <Textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    className="text-sm flex-1 min-h-[200px] mb-4"
+                    placeholder="Describe the diagram you want to create..."
+                  />
+                  
+                  <div>
+                    <h3 className="text-sm font-medium mb-2">Example Prompts</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      {EXAMPLE_PROMPTS.map((prompt, index) => (
+                        <Button 
+                          key={index} 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-left justify-start h-auto py-2 px-3"
+                          onClick={() => handleExamplePromptSelect(prompt)}
+                        >
+                          {prompt}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div key={renderKey} className="mermaid">
-                  {code}
+              </Card>
+              
+              <Button 
+                onClick={handleAiGenerate} 
+                disabled={aiLoading || !aiPrompt.trim()}
+                className="w-full"
+              >
+                {aiLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Generate Diagram
+                  </>
+                )}
+              </Button>
+              
+              {!apiKeySet && (
+                <div className="mt-2 text-amber-600 text-sm flex items-center">
+                  <Key className="h-4 w-4 mr-1" />
+                  Please set your OpenAI API key in settings first
                 </div>
               )}
-            </Card>
+            </>
+          ) : (
+            <>
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="text-lg font-medium">Mermaid Code</h2>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleCopy}
+                    className="flex items-center gap-1"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleReset}
+                    className="flex items-center gap-1"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Reset
+                  </Button>
+                </div>
+              </div>
+              
+              <Textarea
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="font-mono text-sm flex-1 min-h-[300px] resize-none mb-4"
+                placeholder="Enter mermaid diagram code here..."
+              />
+              
+              <div>
+                <h3 className="text-sm font-medium mb-2">Examples</h3>
+                <Tabs defaultValue="flowchart">
+                  <TabsList>
+                    <TabsTrigger value="flowchart" onClick={() => handleExampleSelect('flowchart')}>
+                      Flowchart
+                    </TabsTrigger>
+                    <TabsTrigger value="sequence" onClick={() => handleExampleSelect('sequence')}>
+                      Sequence
+                    </TabsTrigger>
+                    <TabsTrigger value="classDiagram" onClick={() => handleExampleSelect('classDiagram')}>
+                      Class
+                    </TabsTrigger>
+                    <TabsTrigger value="stateDiagram" onClick={() => handleExampleSelect('stateDiagram')}>
+                      State
+                    </TabsTrigger>
+                    <TabsTrigger value="gantt" onClick={() => handleExampleSelect('gantt')}>
+                      Gantt
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            </>
+          )}
+        </div>
+        
+        <Separator orientation="vertical" className="hidden md:block" />
+        <Separator className="md:hidden" />
+        
+        {/* Preview Panel - Always the same */}
+        <div className="w-full md:w-1/2 h-full">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-lg font-medium">Preview</h2>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleCopy}
+              className="flex items-center gap-1"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? 'Copied' : 'Copy Code'}
+            </Button>
           </div>
-        </TabsContent>
-      </Tabs>
+          <Card className="p-4 min-h-[400px] overflow-auto bg-white">
+            {error ? (
+              <div className="text-red-500 p-4 border border-red-200 rounded-md">
+                {error}
+              </div>
+            ) : (
+              <div key={renderKey} className="mermaid">
+                {code}
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
