@@ -7,7 +7,7 @@ const Index = () => {
       <header className="border-b bg-white">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-gray-900">Mermaid Editor</h1>
+            <h1 className="text-xl font-semibold text-gray-900">AI Mermaid Diagram Generator</h1>
             <div className="text-sm text-gray-500">Powered by GPT-4o-mini</div>
           </div>
         </div>
@@ -17,7 +17,8 @@ const Index = () => {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Create Diagrams with AI</h2>
           <p className="text-gray-600">
-            Write Mermaid syntax directly or use AI to generate diagrams from natural language descriptions.
+            Describe the diagram you want in natural language, and let GPT-4o-mini generate the Mermaid code for you.
+            You can also edit the code directly if you prefer.
           </p>
         </div>
         
@@ -26,7 +27,7 @@ const Index = () => {
         </div>
         
         <footer className="mt-8 text-center text-sm text-gray-500">
-          <p>A minimalist Mermaid diagram editor with AI assistance</p>
+          <p>A minimalist AI-powered Mermaid diagram generator</p>
         </footer>
       </main>
     </div>
