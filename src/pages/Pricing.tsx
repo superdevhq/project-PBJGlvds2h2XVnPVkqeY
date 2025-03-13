@@ -3,20 +3,13 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { 
-  Check, X, Zap, Users, Building2, CreditCard, 
-  Calendar, ArrowRight, ChevronDown, ChevronUp, 
-  BarChart, Shield, Clock, Sparkles
-} from 'lucide-react';
+import { Check, X, Zap, Users, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const PricingTier = ({
   name,
   price,
-  monthlyPrice,
-  yearlyPrice,
   description,
   features,
   highlighted = false,
@@ -26,8 +19,6 @@ const PricingTier = ({
 }: {
   name: string;
   price: string;
-  monthlyPrice?: string;
-  yearlyPrice?: string;
   description: string;
   features: { included: boolean; text: string }[];
   highlighted?: boolean;
@@ -76,23 +67,6 @@ const PricingTier = ({
   );
 };
 
-const ComparisonFeature = ({ name, tiers }: { name: string; tiers: { free: boolean; pro: boolean; team: boolean } }) => {
-  return (
-    <div className="grid grid-cols-4 py-4 border-b">
-      <div className="font-medium">{name}</div>
-      <div className="text-center">
-        {tiers.free ? <Check className="h-5 w-5 text-green-500 mx-auto" /> : <X className="h-5 w-5 text-gray-300 mx-auto" />}
-      </div>
-      <div className="text-center">
-        {tiers.pro ? <Check className="h-5 w-5 text-green-500 mx-auto" /> : <X className="h-5 w-5 text-gray-300 mx-auto" />}
-      </div>
-      <div className="text-center">
-        {tiers.team ? <Check className="h-5 w-5 text-green-500 mx-auto" /> : <X className="h-5 w-5 text-gray-300 mx-auto" />}
-      </div>
-    </div>
-  );
-};
-
 const FAQ = ({ question, answer }: { question: string; answer: string }) => {
   const [isOpen, setIsOpen] = useState(false);
   
@@ -103,7 +77,7 @@ const FAQ = ({ question, answer }: { question: string; answer: string }) => {
         onClick={() => setIsOpen(!isOpen)}
       >
         <h3 className="font-medium text-lg">{question}</h3>
-        {isOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+        {isOpen ? <X className="h-5 w-5" /> : <Check className="h-5 w-5" />}
       </button>
       {isOpen && (
         <p className="text-gray-600 mt-2 pr-6">
@@ -111,29 +85,6 @@ const FAQ = ({ question, answer }: { question: string; answer: string }) => {
         </p>
       )}
     </div>
-  );
-};
-
-const Testimonial = ({ quote, author, role, company, avatar }: { 
-  quote: string; 
-  author: string; 
-  role: string; 
-  company: string;
-  avatar: string;
-}) => {
-  return (
-    <Card className="p-6">
-      <div className="flex items-center mb-4">
-        <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden mr-4">
-          <img src={avatar} alt={author} className="w-full h-full object-cover" />
-        </div>
-        <div>
-          <p className="font-medium">{author}</p>
-          <p className="text-sm text-gray-500">{role}, {company}</p>
-        </div>
-      </div>
-      <p className="italic text-gray-700">"{quote}"</p>
-    </Card>
   );
 };
 
@@ -238,158 +189,7 @@ const Pricing = () => {
           />
         </div>
 
-        <div className="mt-24 max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">Compare All Features</h2>
-          
-          <div className="bg-white rounded-lg border overflow-hidden">
-            <div className="grid grid-cols-4 bg-gray-50 py-3 border-b">
-              <div className="font-semibold px-4">Feature</div>
-              <div className="text-center font-semibold">Free</div>
-              <div className="text-center font-semibold">Pro</div>
-              <div className="text-center font-semibold">Team</div>
-            </div>
-            
-            <div className="px-4">
-              <div className="py-3 border-b">
-                <p className="font-semibold text-gray-700">Diagram Creation</p>
-              </div>
-              
-              <ComparisonFeature 
-                name="AI-generated diagrams" 
-                tiers={{ free: true, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Manual code editing" 
-                tiers={{ free: true, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Flowchart diagrams" 
-                tiers={{ free: true, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Sequence diagrams" 
-                tiers={{ free: true, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Class diagrams" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="State diagrams" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Gantt charts" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Entity Relationship diagrams" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              
-              <div className="py-3 border-b mt-4">
-                <p className="font-semibold text-gray-700">Export & Sharing</p>
-              </div>
-              
-              <ComparisonFeature 
-                name="PNG export" 
-                tiers={{ free: true, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="SVG export" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="PDF export" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Diagram sharing" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Embed in websites" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              
-              <div className="py-3 border-b mt-4">
-                <p className="font-semibold text-gray-700">Collaboration</p>
-              </div>
-              
-              <ComparisonFeature 
-                name="Team members" 
-                tiers={{ free: false, pro: false, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Shared diagram library" 
-                tiers={{ free: false, pro: false, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Version history" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Comments & feedback" 
-                tiers={{ free: false, pro: false, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Role-based permissions" 
-                tiers={{ free: false, pro: false, team: true }} 
-              />
-              
-              <div className="py-3 border-b mt-4">
-                <p className="font-semibold text-gray-700">Support</p>
-              </div>
-              
-              <ComparisonFeature 
-                name="Community support" 
-                tiers={{ free: true, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Email support" 
-                tiers={{ free: false, pro: true, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Priority support" 
-                tiers={{ free: false, pro: false, team: true }} 
-              />
-              <ComparisonFeature 
-                name="Dedicated account manager" 
-                tiers={{ free: false, pro: false, team: true }} 
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-24 max-w-6xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">What Our Users Say</h2>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <Testimonial 
-              quote="This tool has completely transformed how I create and share diagrams with my team. The AI generation is incredibly accurate."
-              author="Sarah Johnson"
-              role="Product Manager"
-              company="Acme Inc."
-              avatar="https://randomuser.me/api/portraits/women/44.jpg"
-            />
-            <Testimonial 
-              quote="I've tried many diagram tools, but this one stands out for its ease of use and powerful AI capabilities. Worth every penny!"
-              author="Michael Chen"
-              role="Software Engineer"
-              company="TechCorp"
-              avatar="https://randomuser.me/api/portraits/men/32.jpg"
-            />
-            <Testimonial 
-              quote="The Team plan has been a game-changer for our documentation process. We can collaborate seamlessly and create diagrams in minutes."
-              author="Emily Rodriguez"
-              role="Technical Writer"
-              company="DataSystems"
-              avatar="https://randomuser.me/api/portraits/women/68.jpg"
-            />
-          </div>
-        </div>
-
-        <div className="mt-24 bg-white p-8 rounded-lg border max-w-3xl mx-auto">
+        <div className="mt-16 bg-white p-8 rounded-lg border max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold mb-6">Frequently Asked Questions</h2>
           <div className="space-y-4">
             <FAQ 
@@ -408,22 +208,10 @@ const Pricing = () => {
               question="What payment methods do you accept?"
               answer="We accept all major credit cards (Visa, Mastercard, American Express, Discover), PayPal, and some regional payment methods. For Team plans, we also offer invoice payment options."
             />
-            <FAQ 
-              question="Can I get a refund if I'm not satisfied?"
-              answer="Yes, we offer a 30-day money-back guarantee for all paid plans. If you're not completely satisfied, contact our support team within 30 days of your purchase for a full refund."
-            />
-            <FAQ 
-              question="Do you offer discounts for educational institutions?"
-              answer="Yes, we offer special pricing for educational institutions and non-profit organizations. Please contact our sales team for more information."
-            />
-            <FAQ 
-              question="How does the billing work for team members?"
-              answer="The Team plan includes up to 5 team members. Additional team members can be added for $5 per member per month. Billing is based on the total number of team members at the end of each billing cycle."
-            />
           </div>
         </div>
 
-        <div className="mt-24 max-w-4xl mx-auto bg-primary text-white rounded-xl p-10 text-center">
+        <div className="mt-16 max-w-4xl mx-auto bg-primary text-white rounded-xl p-10 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
           <p className="text-xl mb-8 opacity-90">Join thousands of professionals who create beautiful diagrams with AI assistance.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -437,51 +225,13 @@ const Pricing = () => {
         </div>
       </main>
 
-      <footer className="mt-24 bg-gray-900 text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div>
-              <h3 className="text-xl font-bold mb-4">AI Mermaid Diagram Generator</h3>
-              <p className="text-gray-400">Create beautiful diagrams with the power of AI. Perfect for developers, product managers, and anyone who needs to visualize complex systems.</p>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4">Product</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white">Features</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Pricing</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Roadmap</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Changelog</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4">Resources</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white">Documentation</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Tutorials</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Blog</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Support</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-medium mb-4">Company</h4>
-              <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-white">About</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Careers</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Contact</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Legal</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <Separator className="bg-gray-800" />
-          
-          <div className="mt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 mb-4 md:mb-0">© 2023 AI Mermaid Diagram Generator. All rights reserved.</p>
-            <div className="flex space-x-6">
-              <a href="#" className="text-gray-400 hover:text-white">Terms</a>
-              <a href="#" className="text-gray-400 hover:text-white">Privacy</a>
-              <a href="#" className="text-gray-400 hover:text-white">Cookies</a>
-            </div>
+      <footer className="mt-16 bg-gray-100 border-t py-12">
+        <div className="container mx-auto px-4 text-center text-gray-500">
+          <p className="mb-4">© 2023 AI Mermaid Diagram Generator. All rights reserved.</p>
+          <div className="flex justify-center space-x-4">
+            <a href="#" className="hover:text-gray-900">Terms</a>
+            <a href="#" className="hover:text-gray-900">Privacy</a>
+            <a href="#" className="hover:text-gray-900">Contact</a>
           </div>
         </div>
       </footer>
